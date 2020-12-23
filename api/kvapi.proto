@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package demo.kvapi.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = ".;kvapi";
+
+service KVStorage {
+    rpc Get(KeyRequest) returns (ValueResponse) {
+        option (google.api.http) = {
+            get: "/v1/kv-storage"
+        };
+    }
+    rpc Set(KeyValueRequest) returns(google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v1/kv-storage"
+            body: "*"
+        };
+    }
+    rpc Update(KeyValueRequest) returns(google.protobuf.Empty) {
+        option (google.api.http) = {
+            put: "/v1/kv-storage"    
+            body: "*"
+        };
+    }
+    rpc Delete(KeyRequest) returns(google.protobuf.Empty) {
+        option (google.api.http) = {
+            put: "/v1/kb-storage"
+            body: "*"
+        };
+    }
+}
+
+message KeyRequest {
+    string key = 1;
+}
+
+message KeyValueRequest {
+    string key = 1;
+    string value = 2;
+}
+
+message ValueResponse {
+    string value = 3; 
+}

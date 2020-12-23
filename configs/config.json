@@ -1,0 +1,10 @@
+{
+    "grpc": {
+        "host": "localhost",
+        "port": "8081"
+    }, 
+    "storage": {
+        "savepath": "cache",
+        "savetime": "1m" 
+    } 
+}
