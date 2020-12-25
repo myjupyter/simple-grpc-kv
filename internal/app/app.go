@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/myjupyter/simple-grpc-kv/grpc/kvapi"
+	log "github.com/myjupyter/simple-grpc-kv/pkg/logger"
 	"github.com/myjupyter/simple-grpc-kv/pkg/service"
 	kv "github.com/myjupyter/simple-grpc-kv/pkg/storage"
 	"github.com/myjupyter/simple-grpc-kv/pkg/storage/cacher"
@@ -25,14 +26,17 @@ type Options interface {
 }
 
 type Application struct {
-	opts      Options
+	opts Options
+	log  log.Logger
+
 	st        kv.Storage
 	kvService kvapi.KVStorageServer
 }
 
-func NewApplication(opts Options) *Application {
+func NewApplication(opts Options, logger log.Logger) *Application {
 	return &Application{
 		opts: opts,
+		log:  logger,
 	}
 }
 
@@ -52,7 +56,11 @@ func (app *Application) Run() error {
 	errChanStorage := make(chan error)
 
 	st := cacher.NewCache(app.opts)
-	_ = st.Upload(ctx)
+
+	err = st.Upload(ctx)
+	if err != nil {
+		app.log.Warningf("Cache upload: %s", err)
+	}
 
 	go func(ctx context.Context, s kv.Storage) {
 		newCtx, cancel := context.WithCancel(ctx)
@@ -64,11 +72,17 @@ func (app *Application) Run() error {
 		}
 	}(ctx, st)
 
-	go func(lis net.Listener) {
+	go func(lis net.Listener, logger log.Logger) {
 		grpcServer := grpc.NewServer()
-		kvapi.RegisterKVStorageServer(grpcServer, service.NewKVService(st))
+		kvapi.RegisterKVStorageServer(grpcServer, service.NewKVService(st, logger))
 		errChanService <- grpcServer.Serve(lis)
-	}(lis)
+	}(lis, app.log)
+
+	app.log.Infof(
+		"Sever successfully started on %s:%s",
+		app.opts.Host(),
+		app.opts.Port(),
+	)
 
 	select {
 	case err := <-errChanService:
