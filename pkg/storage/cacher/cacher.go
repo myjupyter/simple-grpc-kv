@@ -12,7 +12,6 @@ const MAX_SIZE = 1 << 25
 
 type Options interface {
 	SavePath() string
-	SaveTime() string
 }
 
 type Cache struct {
@@ -20,7 +19,7 @@ type Cache struct {
 	opts Options
 }
 
-func NewCache(opts Options) *Cache {
+func New(opts Options) *Cache {
 	return &Cache{
 		db:   fast.New(MAX_SIZE),
 		opts: opts,
@@ -62,20 +61,18 @@ func (c *Cache) Upload(_ context.Context) error {
 	return nil
 }
 
-func (c *Cache) Save(ctx context.Context) error {
-	t, err := time.ParseDuration(c.opts.SaveTime())
-	if err != nil {
-		return err
-	}
+func (c *Cache) Save() error {
+	return c.db.SaveToFile(c.opts.SavePath())
+}
 
+func (c *Cache) SaveEvery(ctx context.Context, t time.Duration) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-time.After(t):
-			err = c.db.SaveToFile(c.opts.SavePath())
-			if err != nil {
-				return nil
+			if err := c.Save(); err != nil {
+				return err
 			}
 		}
 	}

@@ -21,14 +21,16 @@ func (ac AppConfig) Port() string {
 
 type StorageConfig struct {
 	SP string `json:"savepath"`
-	ST string `json:"savetime"`
+
+	Time string `json:"savetime"`
+	ST   time.Duration
 }
 
 func (sc StorageConfig) SavePath() string {
 	return sc.SP
 }
 
-func (sc StorageConfig) SaveTime() string {
+func (sc StorageConfig) SaveTime() time.Duration {
 	return sc.ST
 }
 
@@ -50,9 +52,10 @@ func NewConfig(raw []byte) (Config, error) {
 	if err := json.Unmarshal(raw, &config); err != nil {
 		return Config{}, err
 	}
-	_, err := time.ParseDuration(config.SaveTime())
+	t, err := time.ParseDuration(config.Time)
 	if err != nil {
 		return Config{}, err
 	}
+	config.ST = t
 	return config, nil
 }

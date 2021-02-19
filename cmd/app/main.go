@@ -22,7 +22,7 @@ func main() {
 
 	logger := log.NewLoggerV2(os.Stdout, os.Stdout, os.Stderr)
 
-	application := app.NewApplication(cfg, logger)
+	application := app.New(cfg, logger)
 	if err = application.Run(); err != nil {
 		if !errors.Is(err, app.ErrAppInterrupted) {
 			logger.Fatal(err)

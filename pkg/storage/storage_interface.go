@@ -1,6 +1,9 @@
 package storage
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Storage interface {
 	Get(string) (string, error)
@@ -8,5 +11,6 @@ type Storage interface {
 	Update(string, string) error
 	Delete(string) error
 	Upload(context.Context) error
-	Save(context.Context) error
+	Save() error
+	SaveEvery(context.Context, time.Duration) error
 }

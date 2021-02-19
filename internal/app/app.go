@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -20,7 +21,7 @@ var ErrAppInterrupted = fmt.Errorf("interrupt signal")
 
 type Options interface {
 	SavePath() string
-	SaveTime() string
+	SaveTime() time.Duration
 	Host() string
 	Port() string
 }
@@ -33,7 +34,7 @@ type Application struct {
 	kvService kvapi.KVStorageServer
 }
 
-func NewApplication(opts Options, logger log.Logger) *Application {
+func New(opts Options, logger log.Logger) *Application {
 	return &Application{
 		opts: opts,
 		log:  logger,
@@ -44,7 +45,12 @@ func (app *Application) Run() error {
 
 	ctx := context.Background()
 
-	address := app.opts.Host() + ":" + app.opts.Port()
+	address := fmt.Sprintf(
+		"%s:%s",
+		app.opts.Host(),
+		app.opts.Port(),
+	)
+
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		return err
@@ -55,22 +61,25 @@ func (app *Application) Run() error {
 
 	errChanStorage := make(chan error)
 
-	st := cacher.NewCache(app.opts)
+	st := cacher.New(app.opts)
 
 	err = st.Upload(ctx)
 	if err != nil {
 		app.log.Warningf("Cache upload: %s", err)
+		err = st.Save()
+		if err != nil {
+			app.log.Errorf("Cache saving: %s", err)
+			return err
+		}
 	}
 
-	go func(ctx context.Context, s kv.Storage) {
-		newCtx, cancel := context.WithCancel(ctx)
+	go func(s kv.Storage) {
 		select {
-		case errChanStorage <- s.Save(newCtx):
-			cancel()
 		case <-ctx.Done():
-			cancel()
+		case errChanStorage <- s.SaveEvery(ctx, app.opts.SaveTime()):
 		}
-	}(ctx, st)
+		return
+	}(st)
 
 	go func(lis net.Listener, logger log.Logger) {
 		grpcServer := grpc.NewServer()
