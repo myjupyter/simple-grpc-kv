@@ -10,24 +10,24 @@ option go_package = ".;kvapi";
 service KVStorage {
     rpc Get(KeyRequest) returns (ValueResponse) {
         option (google.api.http) = {
-            get: "/v1/kv-storage"
+            get: "/v1/get"
         };
     }
     rpc Set(KeyValueRequest) returns(google.protobuf.Empty) {
         option (google.api.http) = {
-            post: "/v1/kv-storage"
+            post: "/v1/set"
             body: "*"
         };
     }
     rpc Update(KeyValueRequest) returns(google.protobuf.Empty) {
         option (google.api.http) = {
-            put: "/v1/kv-storage"    
+            put: "/v1/update"    
             body: "*"
         };
     }
     rpc Delete(KeyRequest) returns(google.protobuf.Empty) {
         option (google.api.http) = {
-            put: "/v1/kb-storage"
+            put: "/v1/delete"
             body: "*"
         };
     }

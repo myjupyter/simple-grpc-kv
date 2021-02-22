@@ -6,56 +6,56 @@ import (
 	"time"
 )
 
-type AppConfig struct {
-	H string `json:"host"`
-	P string `json:"port"`
+type ServiceConfig struct {
+	ServiceHost string `json:"host"`
+	ServicePort string `json:"port"`
 }
 
-func (ac AppConfig) Host() string {
-	return ac.H
+func (sc ServiceConfig) Host() string {
+	return sc.ServiceHost
 }
 
-func (ac AppConfig) Port() string {
-	return ac.P
+func (sc ServiceConfig) Port() string {
+	return sc.ServicePort
 }
 
 type StorageConfig struct {
-	SP string `json:"savepath"`
-
-	Time string `json:"savetime"`
-	ST   time.Duration
+	SavePath string `json:"save_path"`
+	SaveTime string `json:"save_time"`
+	time     time.Duration
 }
 
-func (sc StorageConfig) SavePath() string {
-	return sc.SP
+func (sc StorageConfig) Path() string {
+	return sc.SavePath
 }
 
-func (sc StorageConfig) SaveTime() time.Duration {
-	return sc.ST
+func (sc StorageConfig) Time() time.Duration {
+	return sc.time
 }
 
 type Config struct {
-	AppConfig     `json:"grpc"`
-	StorageConfig `json:"storage"`
+	GRPC    ServiceConfig `json:"grpc"`
+	HTTP    ServiceConfig `json:"http,omitempty"`
+	Storage StorageConfig `json:"storage"`
 }
 
-func NewConfigFromFile(configPath string) (Config, error) {
+func NewConfigFromFile(configPath string) (*Config, error) {
 	raw, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		return Config{}, err
+		return nil, err
 	}
 	return NewConfig(raw)
 }
 
-func NewConfig(raw []byte) (Config, error) {
-	config := Config{}
-	if err := json.Unmarshal(raw, &config); err != nil {
-		return Config{}, err
+func NewConfig(raw []byte) (*Config, error) {
+	config := new(Config)
+	if err := json.Unmarshal(raw, config); err != nil {
+		return nil, err
 	}
-	t, err := time.ParseDuration(config.Time)
+	t, err := time.ParseDuration(config.Storage.SaveTime)
 	if err != nil {
-		return Config{}, err
+		return nil, err
 	}
-	config.ST = t
+	config.Storage.time = t
 	return config, nil
 }

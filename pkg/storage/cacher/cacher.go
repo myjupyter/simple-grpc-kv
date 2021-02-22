@@ -11,7 +11,7 @@ import (
 const MAX_SIZE = 1 << 25
 
 type Options interface {
-	SavePath() string
+	Path() string
 }
 
 type Cache struct {
@@ -53,7 +53,7 @@ func (c *Cache) Delete(key string) error {
 }
 
 func (c *Cache) Upload(_ context.Context) error {
-	db, err := fast.LoadFromFile(c.opts.SavePath())
+	db, err := fast.LoadFromFile(c.opts.Path())
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (c *Cache) Upload(_ context.Context) error {
 }
 
 func (c *Cache) Save() error {
-	return c.db.SaveToFile(c.opts.SavePath())
+	return c.db.SaveToFile(c.opts.Path())
 }
 
 func (c *Cache) SaveEvery(ctx context.Context, t time.Duration) error {

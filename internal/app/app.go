@@ -6,11 +6,11 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"time"
 
 	"google.golang.org/grpc"
 
 	"github.com/myjupyter/simple-grpc-kv/grpc/kvapi"
+	"github.com/myjupyter/simple-grpc-kv/pkg/config"
 	log "github.com/myjupyter/simple-grpc-kv/pkg/logger"
 	"github.com/myjupyter/simple-grpc-kv/pkg/service"
 	kv "github.com/myjupyter/simple-grpc-kv/pkg/storage"
@@ -19,25 +19,18 @@ import (
 
 var ErrAppInterrupted = fmt.Errorf("interrupt signal")
 
-type Options interface {
-	SavePath() string
-	SaveTime() time.Duration
-	Host() string
-	Port() string
-}
-
 type Application struct {
-	opts Options
-	log  log.Logger
+	config *config.Config
+	log    log.Logger
 
 	st        kv.Storage
 	kvService kvapi.KVStorageServer
 }
 
-func New(opts Options, logger log.Logger) *Application {
+func New(config *config.Config, logger log.Logger) *Application {
 	return &Application{
-		opts: opts,
-		log:  logger,
+		config: config,
+		log:    logger,
 	}
 }
 
@@ -47,8 +40,8 @@ func (app *Application) Run() error {
 
 	address := fmt.Sprintf(
 		"%s:%s",
-		app.opts.Host(),
-		app.opts.Port(),
+		app.config.GRPC.Host(),
+		app.config.GRPC.Port(),
 	)
 
 	lis, err := net.Listen("tcp", address)
@@ -61,7 +54,7 @@ func (app *Application) Run() error {
 
 	errChanStorage := make(chan error)
 
-	st := cacher.New(app.opts)
+	st := cacher.New(app.config.Storage)
 
 	err = st.Upload(ctx)
 	if err != nil {
@@ -76,7 +69,7 @@ func (app *Application) Run() error {
 	go func(s kv.Storage) {
 		select {
 		case <-ctx.Done():
-		case errChanStorage <- s.SaveEvery(ctx, app.opts.SaveTime()):
+		case errChanStorage <- s.SaveEvery(ctx, app.config.Storage.Time()):
 		}
 		return
 	}(st)
@@ -88,9 +81,10 @@ func (app *Application) Run() error {
 	}(lis, app.log)
 
 	app.log.Infof(
-		"Sever successfully started on %s:%s",
-		app.opts.Host(),
-		app.opts.Port(),
+		"%s server successfully started on %s:%s",
+		"GRPC",
+		app.config.GRPC.Host(),
+		app.config.GRPC.Port(),
 	)
 
 	select {
